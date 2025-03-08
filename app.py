@@ -33,7 +33,15 @@ def main():
     # 在文件开头添加会话状态初始化
     if 'delete_confirm' not in st.session_state:
         st.session_state.delete_confirm = set()
-    
+    if 'downloaded_image' not in st.session_state:
+        st.session_state.downloaded_image = None
+    if 'downloaded_image_path' not in st.session_state:
+        st.session_state.downloaded_image_path = None
+    # 添加重置按钮
+        if st.button("重新下载"):
+            st.session_state.downloaded_image = None
+            st.session_state.downloaded_image_path = None
+            st.rerun()
     with tab1:
         st.header("上传新的测试题目")
         
@@ -49,13 +57,20 @@ def main():
             image_url = st.text_input("输入图片网址")
             if image_url:
                 try:
-                    response = requests.get(image_url)
-                    if response.status_code == 200:
-                        image = Image.open(BytesIO(response.content))
-                        st.image(image, caption="预览图片")
-                        image_path, error = db.download_image(image_url)
-                        if error:
-                            st.error(error)
+                    if st.session_state.downloaded_image is None:
+                        response = requests.get(image_url)
+                        if response.status_code == 200:
+                            image = Image.open(BytesIO(response.content))
+                            st.session_state.downloaded_image = image
+                            image_path, error = db.download_image(image_url)
+                            if error:
+                                st.error(error)
+                            else:
+                                st.session_state.downloaded_image_path = image_path
+                    if st.session_state.downloaded_image is not None:
+                        st.image(st.session_state.downloaded_image, caption="预览图片")
+                        image_path = st.session_state.downloaded_image_path
+                    
                 except Exception as e:
                     st.error(f"无法加载图片: {str(e)}")
                     image_path = None
