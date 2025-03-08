@@ -30,6 +30,9 @@ def main():
     st.title("色盲测试题库管理系统")
     
     tab1, tab2 = st.tabs(["上传新题目", "查看题库"])
+    # 在文件开头添加会话状态初始化
+    if 'delete_confirm' not in st.session_state:
+        st.session_state.delete_confirm = set()
     
     with tab1:
         st.header("上传新的测试题目")
@@ -117,20 +120,35 @@ def main():
                         st.write(f"创建时间: {question[3]}")
                     
                     with col2:
-                        if st.button("删除题目", key=f"delete_btn_{question[0]}"):
-                            # 删除数据库记录并获取图片路径
-                            image_path = db.delete_question(question[0])
-                            # 删除图片文件
-                            if image_path and os.path.exists(image_path):
-                                try:
-                                    os.remove(image_path)
-                                    st.success("题目已删除")
-                                    st.rerun()  # 使用新的 rerun 方法
-                                except Exception as e:
-                                    st.error(f"删除图片文件失败: {str(e)}")
-                            else:
-                                st.success("题目已删除")
-                                st.rerun()  # 使用新的 rerun 方法
+                        # 检查是否在确认状态
+                        if question[0] in st.session_state.delete_confirm:
+                            st.warning("确定要删除这个题目吗？")
+                            col3, col4 = st.columns(2)
+                            with col3:
+                                if st.button("确认删除", key=f"confirm_delete_{question[0]}"):
+                                    # 删除数据库记录并获取图片路径
+                                    image_path = db.delete_question(question[0])
+                                    # 删除图片文件
+                                    if image_path and os.path.exists(image_path):
+                                        try:
+                                            os.remove(image_path)
+                                            st.success("题目已删除")
+                                            st.session_state.delete_confirm.remove(question[0])
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"删除图片文件失败: {str(e)}")
+                                    else:
+                                        st.success("题目已删除")
+                                        st.session_state.delete_confirm.remove(question[0])
+                                        st.rerun()
+                            with col4:
+                                if st.button("取消", key=f"cancel_delete_{question[0]}"):
+                                    st.session_state.delete_confirm.remove(question[0])
+                                    st.rerun()
+                        else:
+                            if st.button("删除题目", key=f"delete_btn_{question[0]}"):
+                                st.session_state.delete_confirm.add(question[0])
+                                st.rerun()
                 else:
                     st.error("图片文件不存在")
 if __name__ == "__main__":

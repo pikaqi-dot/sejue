@@ -94,5 +94,13 @@ class Database:
                 image_path = result[0]
                 # 删除数据库记录
                 cursor.execute("DELETE FROM questions WHERE id = ?", (question_id,))
+                
+                # 重置自增序列
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name='questions'")
+                cursor.execute("""
+                    INSERT INTO sqlite_sequence (name, seq) 
+                    SELECT 'questions', MAX(id) FROM questions
+                """)
+                
                 return image_path
             return None
