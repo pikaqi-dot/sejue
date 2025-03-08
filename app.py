@@ -81,19 +81,57 @@ def main():
     with tab2:
         st.header("题库列表")
         
+        # 添加清理按钮
+        if st.button("清理未使用的图片"):
+            # 获取数据库中的所有图片路径
+            db_image_paths = set(db.get_all_image_paths())
+            
+            # 获取images文件夹中的所有文件
+            image_files = [os.path.join("images", f) for f in os.listdir("images")]
+            
+            # 找出不在数据库中的文件
+            unused_images = [f for f in image_files if f not in db_image_paths]
+            
+            # 删除未使用的图片
+            for img_path in unused_images:
+                try:
+                    os.remove(img_path)
+                except Exception as e:
+                    st.error(f"删除文件 {img_path} 失败: {str(e)}")
+            
+            if unused_images:
+                st.success(f"成功清理 {len(unused_images)} 个未使用的图片文件")
+            else:
+                st.info("没有发现未使用的图片文件")
+    
         questions = db.get_all_questions()
         
         for question in questions:
             with st.expander(f"题目 #{question[0]}"):
                 if os.path.exists(question[1]):
-                    st.image(question[1])
+                    st.image(question[1])      
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        if st.button(f"显示答案 #{question[0]}", key=f"answer_btn_{question[0]}"):
+                            st.write(f"正确答案: {question[2]}")
+                        st.write(f"创建时间: {question[3]}")
+                    
+                    with col2:
+                        if st.button("删除题目", key=f"delete_btn_{question[0]}"):
+                            # 删除数据库记录并获取图片路径
+                            image_path = db.delete_question(question[0])
+                            # 删除图片文件
+                            if image_path and os.path.exists(image_path):
+                                try:
+                                    os.remove(image_path)
+                                    st.success("题目已删除")
+                                    st.rerun()  # 使用新的 rerun 方法
+                                except Exception as e:
+                                    st.error(f"删除图片文件失败: {str(e)}")
+                            else:
+                                st.success("题目已删除")
+                                st.rerun()  # 使用新的 rerun 方法
                 else:
                     st.error("图片文件不存在")
-                    
-                # 添加显示答案的按钮
-                if st.button(f"显示答案 #{question[0]}", key=f"answer_btn_{question[0]}"):
-                    st.write(f"正确答案: {question[2]}")
-                st.write(f"创建时间: {question[3]}")
-
 if __name__ == "__main__":
     main()
